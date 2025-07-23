@@ -2,6 +2,7 @@
 
 ![Development Status](https://img.shields.io/badge/status-in%20development-yellow)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
+![Build Status](https://img.shields.io/badge/build-failed-red)
 ![Language](https://img.shields.io/badge/language-C%2B%2B17-blue)
 ![Framework](https://img.shields.io/badge/framework-CEF%20%7C%20SDL2-green)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%7C%20Vue%20%7C%20TypeScript-61DAFB)

@@ -30,7 +30,7 @@
 #include <chrono>
 
 // Local includes
-#include <mikoview/app_config.hpp>
+#include "app_config.hpp"
 #include <mikoview/logger.hpp>
 #include <mikoview/mikoclient.hpp>
 #include <mikoview/mikoapp.hpp>
