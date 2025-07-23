@@ -3,6 +3,15 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <cstdlib>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <shlobj.h>
+#elif defined(__linux__)
+#include <unistd.h>
+#include <limits.h>
+#endif
 
 // Static member definitions
 bool AppConfig::assets_preloaded_ = false;
@@ -16,25 +25,76 @@ bool AppConfig::IsDebugMode() {
 #endif
 }
 
+std::string AppConfig::GetVersion() {
+    return BUILD_VERSION;
+}
+
+std::string AppConfig::GetAppName() {
+    return PROJECT_NAME;
+}
+
+int AppConfig::GetDefaultWindowWidth() {
+    return @MIKO_DEFAULT_WINDOW_WIDTH@;
+}
+
+int AppConfig::GetDefaultWindowHeight() {
+    return @MIKO_DEFAULT_WINDOW_HEIGHT@;
+}
+
+bool AppConfig::GetStartHidden() {
+    return @MIKO_START_HIDDEN_BOOL@;
+}
+
+int AppConfig::GetRemoteDebuggingPort() {
+    return @MIKO_DEBUG_PORT@;
+}
+
+bool AppConfig::EnableHotReload() {
+    return IsDebugMode() && @MIKO_ENABLE_HOT_RELOAD_BOOL@;
+}
+
+std::string AppConfig::GetDevServerUrl() {
+    return "@MIKO_DEV_SERVER_URL@";
+}
+
+std::string AppConfig::GetExecutablePath() {
+#ifdef _WIN32
+    char path[MAX_PATH];
+    GetModuleFileNameA(NULL, path, MAX_PATH);
+    return std::filesystem::path(path).parent_path().string();
+#elif defined(__linux__)
+    char path[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
+    if (count != -1) {
+        path[count] = '\0';
+        return std::filesystem::path(path).parent_path().string();
+    }
+    return std::filesystem::current_path().string();
+#else
+    return std::filesystem::current_path().string();
+#endif
+}
+
+std::string AppConfig::GetAssetsPath() {
+    return (std::filesystem::path(GetExecutablePath()) / "assets").string();
+}
+
 bool AppConfig::PreloadAssets() {
     if (assets_preloaded_) {
-        return true; // Already preloaded
+        return true;
     }
     
-    if (IsDebugMode()) {
-        // In debug mode, just set the URL - no preloading needed
-        preloaded_url_ = "http://localhost:3000";
+    if (IsDebugMode() && EnableHotReload()) {
+        preloaded_url_ = GetDevServerUrl();
         assets_preloaded_ = true;
         return true;
     }
     
-    std::filesystem::path exePath = std::filesystem::current_path();
-    std::filesystem::path assetsPath = exePath / "assets";
+    std::filesystem::path assetsPath = GetAssetsPath();
     std::filesystem::path indexPath = assetsPath / "index.html";
     
     // Check if assets are already extracted
     if (std::filesystem::exists(indexPath)) {
-        // Convert Windows path to proper file URL format
         std::string pathStr = indexPath.string();
         std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
         preloaded_url_ = "file:///" + pathStr;
@@ -43,11 +103,13 @@ bool AppConfig::PreloadAssets() {
     }
     
     // Try to extract from app.zip
-    std::filesystem::path zipPath = exePath / "assets" / "app.zip";
+    std::filesystem::path zipPath = assetsPath / "app.zip";
     if (std::filesystem::exists(zipPath)) {
         if (ExtractAppZip(zipPath.string(), assetsPath.string())) {
             if (std::filesystem::exists(indexPath)) {
-                preloaded_url_ = "app://index.html";
+                std::string pathStr = indexPath.string();
+                std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
+                preloaded_url_ = "file:///" + pathStr;
                 assets_preloaded_ = true;
                 return true;
             }
@@ -55,7 +117,7 @@ bool AppConfig::PreloadAssets() {
     }
     
     // Fallback error page
-    preloaded_url_ = "data:text/html,<html><body><h1>Assets not found</h1><p>Please ensure app.zip exists in the assets directory</p></body></html>";
+    preloaded_url_ = "data:text/html,<html><body style='font-family:Arial;text-align:center;padding:50px'><h1>Assets Not Found</h1><p>Application assets could not be loaded.</p><p>Build: " + std::string(BUILD_VERSION) + " (" + std::string(BUILD_TYPE) + ")</p></body></html>";
     assets_preloaded_ = true;
     return false;
 }
@@ -64,52 +126,53 @@ std::string AppConfig::GetPreloadedUrl() {
     if (assets_preloaded_) {
         return preloaded_url_;
     }
-    return GetStartupUrl(); // Fallback to original method
+    return GetStartupUrl();
 }
 
 std::string AppConfig::GetStartupUrl() {
-    if (IsDebugMode()) {
-        return "http://localhost:3000";
-    } else {
-        std::filesystem::path exePath = std::filesystem::current_path();
-        std::filesystem::path assetsPath = exePath / "assets";
-        std::filesystem::path indexPath = assetsPath / "index.html";
-        
-        // Check if assets are already extracted
-        if (std::filesystem::exists(indexPath)) {
-            // Convert Windows path to proper file URL format
-            std::string pathStr = indexPath.string();
-            // Replace backslashes with forward slashes for file URLs
-            std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
-            return "file:///" + pathStr;
-        }
-        
-        // Try to extract from app.zip
-        std::filesystem::path zipPath = exePath / "assets" / "app.zip";
-        if (std::filesystem::exists(zipPath)) {
-            if (ExtractAppZip(zipPath.string(), assetsPath.string())) {
-                if (std::filesystem::exists(indexPath)) {
-                    return "app://index.html";
-                }
+    if (IsDebugMode() && EnableHotReload()) {
+        return GetDevServerUrl();
+    }
+    
+    std::filesystem::path assetsPath = GetAssetsPath();
+    std::filesystem::path indexPath = assetsPath / "index.html";
+    
+    if (std::filesystem::exists(indexPath)) {
+        std::string pathStr = indexPath.string();
+        std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
+        return "file:///" + pathStr;
+    }
+    
+    // Try to extract from app.zip
+    std::filesystem::path zipPath = assetsPath / "app.zip";
+    if (std::filesystem::exists(zipPath)) {
+        if (ExtractAppZip(zipPath.string(), assetsPath.string())) {
+            if (std::filesystem::exists(indexPath)) {
+                std::string pathStr = indexPath.string();
+                std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
+                return "file:///" + pathStr;
             }
         }
-        
-        return "data:text/html,<html><body><h1>Assets not found</h1><p>Please ensure app.zip exists in the assets directory</p></body></html>";
     }
+    
+    return "data:text/html,<html><body style='font-family:Arial;text-align:center;padding:50px'><h1>Welcome to MikoView</h1><p>No assets found. Please build your frontend application.</p></body></html>";
 }
 
 bool AppConfig::ExtractAppZip(const std::string& zipPath, const std::string& extractPath) {
     try {
-        // Create extraction directory if it doesn't exist
         std::filesystem::create_directories(extractPath);
         
-        // Use system command to extract zip (Windows built-in)
+#ifdef _WIN32
         std::string command = "powershell -command \"Expand-Archive -Path '" + zipPath + "' -DestinationPath '" + extractPath + "' -Force\"";
-        int result = system(command.c_str());
+#elif defined(__linux__)
+        std::string command = "unzip -o \"" + zipPath + "\" -d \"" + extractPath + "\"";
+#else
+        return false; // Unsupported platform
+#endif
         
+        int result = std::system(command.c_str());
         return result == 0;
     } catch (const std::exception& e) {
         std::cerr << "Error extracting zip: " << e.what() << std::endl;
         return false;
     }
-}

@@ -23,7 +23,7 @@ configure_output_directories()
 # Convert icon if needed (Windows)
 convert_icon_if_needed()
 
-# Setup MikoView framework
+# Setup MikoView framework (this now generates config files)
 setup_mikoview_framework()
 
 # Example executable (if enabled)
@@ -33,19 +33,16 @@ if(MIKO_BUILD_EXAMPLES)
         if(MIKO_WIN32_CONSOLE)
             add_executable(${PROJECT_NAME}
                 example/main.cpp
-                example/app_config.cpp
             )
         else()
             add_executable(${PROJECT_NAME} WIN32
                 example/main.cpp
-                example/app_config.cpp
             )
         endif()
     else()
         # Linux/Unix application
         add_executable(${PROJECT_NAME}
             example/main.cpp
-            example/app_config.cpp
         )
     endif()
     
@@ -70,6 +67,7 @@ if(MIKO_BUILD_EXAMPLES)
     target_include_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/example
+        ${CMAKE_CURRENT_BINARY_DIR}/generated
         ${CEF_ROOT}
     )
     
@@ -101,6 +99,8 @@ endif()
 install(FILES mikoview.hpp DESTINATION ${MIKO_INSTALL_INCLUDEDIR})
 install(DIRECTORY mikoview/ DESTINATION ${MIKO_INSTALL_INCLUDEDIR}/mikoview
     FILES_MATCHING PATTERN "*.hpp")
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/mikoview/app_config.hpp 
+    DESTINATION ${MIKO_INSTALL_INCLUDEDIR}/mikoview)
 
 # Include CPack for packaging
 include(CPack)

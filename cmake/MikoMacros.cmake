@@ -38,6 +38,97 @@ macro(SET_EXECUTABLE_TARGET_PROPERTIES target)
 endmacro()
 
 # =============================================================================
+# Configuration Generation
+# =============================================================================
+
+# Generate app_config files from templates
+function(generate_app_config)
+    # Set default values if not provided
+    if(NOT DEFINED MIKO_DEFAULT_WINDOW_WIDTH)
+        set(MIKO_DEFAULT_WINDOW_WIDTH 1200)
+    endif()
+    
+    if(NOT DEFINED MIKO_DEFAULT_WINDOW_HEIGHT)
+        set(MIKO_DEFAULT_WINDOW_HEIGHT 800)
+    endif()
+    
+    if(NOT DEFINED MIKO_START_HIDDEN)
+        set(MIKO_START_HIDDEN true)
+    endif()
+    
+    if(NOT DEFINED MIKO_DEBUG_PORT)
+        set(MIKO_DEBUG_PORT 9222)
+    endif()
+    
+    if(NOT DEFINED MIKO_ENABLE_HOT_RELOAD)
+        set(MIKO_ENABLE_HOT_RELOAD true)
+    endif()
+    
+    if(NOT DEFINED MIKO_DEV_SERVER_URL)
+        set(MIKO_DEV_SERVER_URL "http://localhost:3000")
+    endif()
+    
+    # Convert boolean values to C++ boolean literals
+    if(MIKO_START_HIDDEN)
+        set(MIKO_START_HIDDEN_BOOL "true")
+    else()
+        set(MIKO_START_HIDDEN_BOOL "false")
+    endif()
+    
+    if(MIKO_ENABLE_HOT_RELOAD)
+        set(MIKO_ENABLE_HOT_RELOAD_BOOL "true")
+    else()
+        set(MIKO_ENABLE_HOT_RELOAD_BOOL "false")
+    endif()
+    
+    # Set platform and architecture info
+    if(NOT DEFINED MIKO_PLATFORM)
+        if(WIN32)
+            set(MIKO_PLATFORM "Windows")
+        elseif(APPLE)
+            set(MIKO_PLATFORM "macOS")
+        elseif(UNIX)
+            set(MIKO_PLATFORM "Linux")
+        else()
+            set(MIKO_PLATFORM "Unknown")
+        endif()
+    endif()
+    
+    if(NOT DEFINED MIKO_ARCH)
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            set(MIKO_ARCH "x64")
+        else()
+            set(MIKO_ARCH "x86")
+        endif()
+    endif()
+    
+    # Set CEF version if available
+    if(NOT DEFINED CEF_VERSION)
+        set(CEF_VERSION "Unknown")
+    endif()
+    
+    # Generate header file
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/mikoview/config/app_config.hpp.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/generated/mikoview/app_config.hpp"
+        @ONLY
+    )
+    
+    # Generate source file
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/mikoview/config/app_config.cpp.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/generated/mikoview/app_config.cpp"
+        @ONLY
+    )
+    
+    message(STATUS "Generated app_config files with:")
+    message(STATUS "  - Window Size: ${MIKO_DEFAULT_WINDOW_WIDTH}x${MIKO_DEFAULT_WINDOW_HEIGHT}")
+    message(STATUS "  - Debug Port: ${MIKO_DEBUG_PORT}")
+    message(STATUS "  - Dev Server: ${MIKO_DEV_SERVER_URL}")
+    message(STATUS "  - Platform: ${MIKO_PLATFORM} (${MIKO_ARCH})")
+endfunction()
+
+# =============================================================================
 # File Copy Utilities
 # =============================================================================
 
@@ -97,17 +188,37 @@ endfunction()
 
 # Copy application assets for release builds
 function(setup_app_assets target)
-    if(CMAKE_BUILD_TYPE STREQUAL "Release" OR "$<CONFIG>" STREQUAL "Release")
-        add_custom_command(TARGET ${target} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E make_directory
-            "${CEF_TARGET_OUT_DIR}/assets"
-            COMMENT "Creating assets directory"
-        )
+    # Create assets directory
+    add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+        "${CEF_TARGET_OUT_DIR}/assets"
+        COMMENT "Creating assets directory"
+    )
+    
+    # Copy app.zip if it exists
+    if(EXISTS "${CMAKE_SOURCE_DIR}/example/assets/app.zip")
         add_custom_command(TARGET ${target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/example/assets/app.zip"
             "${CEF_TARGET_OUT_DIR}/assets/app.zip"
-            COMMENT "Copying app.zip to release directory"
+            COMMENT "Copying app.zip to assets directory"
+        )
+    endif()
+    
+    # Copy built frontend assets if they exist
+    if(EXISTS "${CMAKE_SOURCE_DIR}/renderer/react/dist")
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/renderer/react/dist"
+            "${CEF_TARGET_OUT_DIR}/assets"
+            COMMENT "Copying React build to assets directory"
+        )
+    elseif(EXISTS "${CMAKE_SOURCE_DIR}/renderer/vue/dist")
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/renderer/vue/dist"
+            "${CEF_TARGET_OUT_DIR}/assets"
+            COMMENT "Copying Vue build to assets directory"
         )
     endif()
 endfunction()
@@ -144,6 +255,9 @@ endfunction()
 
 # Setup MikoView framework target
 function(setup_mikoview_framework)
+    # Generate configuration files first
+    generate_app_config()
+    
     # Get platform-specific sources
     get_platform_sources(PLATFORM_SOURCES)
     
@@ -152,10 +266,10 @@ function(setup_mikoview_framework)
         mikoview.cpp
         mikoview/mikoapp.cpp
         mikoview/mikoclient.cpp
-        mikoview/app_config.cpp
         mikoview/logger.cpp
         mikoview/jsapi/invoke.cpp
         mikoview/jsapi/filesystem.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/mikoview/app_config.cpp
         ${PLATFORM_SOURCES}
     )
     
@@ -168,6 +282,7 @@ function(setup_mikoview_framework)
     # Framework include directories
     target_include_directories(mikoview_framework PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_BINARY_DIR}/generated
         ${CEF_ROOT}
     )
     

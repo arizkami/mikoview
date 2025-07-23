@@ -3,13 +3,38 @@
 
 class AppConfig {
 public:
+    // Core configuration
     static bool IsDebugMode();
     static std::string GetStartupUrl();
-    static bool PreloadAssets(); // New preload function
-    static std::string GetPreloadedUrl(); // Get preloaded URL
+    static std::string GetVersion();
+    static std::string GetAppName();
+    
+    // Asset management
+    static bool PreloadAssets();
+    static std::string GetPreloadedUrl();
+    static std::string GetAssetsPath();
+    
+    // Window configuration
+    static int GetDefaultWindowWidth();
+    static int GetDefaultWindowHeight();
+    static bool GetStartHidden();
+    
+    // Development features
+    static int GetRemoteDebuggingPort();
+    static bool EnableHotReload();
+    static std::string GetDevServerUrl();
+    
+    // Build-time configuration (populated by CMake)
+    static constexpr const char* BUILD_VERSION = "@MIKO_VERSION@";
+    static constexpr const char* BUILD_PLATFORM = "@MIKO_PLATFORM@";
+    static constexpr const char* BUILD_ARCH = "@MIKO_ARCH@";
+    static constexpr const char* BUILD_TYPE = "@CMAKE_BUILD_TYPE@";
+    static constexpr const char* CEF_VERSION = "@CEF_VERSION@";
+    static constexpr const char* PROJECT_NAME = "@PROJECT_NAME@";
     
 private:
     static bool ExtractAppZip(const std::string& zipPath, const std::string& extractPath);
-    static bool assets_preloaded_; // Track preload status
-    static std::string preloaded_url_; // Cache preloaded URL
+    static bool assets_preloaded_;
+    static std::string preloaded_url_;
+    static std::string GetExecutablePath();
 };
