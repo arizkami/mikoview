@@ -154,6 +154,7 @@ function(setup_mikoview_framework)
         mikoview/simple_client.cpp
         mikoview/logger.cpp
         mikoview/jsapi/invoke.cpp
+        mikoview/jsapi/filesystem.cpp
         ${PLATFORM_SOURCES}
     )
     

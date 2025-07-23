@@ -1,5 +1,14 @@
 # MikoView
 
+![Development Status](https://img.shields.io/badge/status-in%20development-yellow)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
+![Language](https://img.shields.io/badge/language-C%2B%2B17-blue)
+![Framework](https://img.shields.io/badge/framework-CEF%20%7C%20SDL2-green)
+![Frontend](https://img.shields.io/badge/frontend-React%20%7C%20TypeScript-61DAFB)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Build System](https://img.shields.io/badge/build-CMake-red)
+![Version](https://img.shields.io/badge/version-1.0.0--dev-orange)
+
 A modern desktop WebView built with React, CEF (Chromium Embedded Framework), and SDL2.
 
 ## Features
