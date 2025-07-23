@@ -109,7 +109,7 @@ else()
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CEF_TARGET_OUT_DIR})
 endif()
 
-# Create logical targets for CEF libraries
+# Platform-specific CEF library setup
 if(OS_WINDOWS)
     # Create libcef_lib target
     add_library(libcef_lib SHARED IMPORTED)
@@ -124,9 +124,20 @@ if(OS_WINDOWS)
     
     # Create libcef_dll_wrapper target
     add_subdirectory("${CEF_ROOT}/libcef_dll" libcef_dll_wrapper)
+elseif(OS_LINUX)
+    # Create libcef_lib target for Linux
+    add_library(libcef_lib SHARED IMPORTED)
+    set_target_properties(libcef_lib PROPERTIES
+        IMPORTED_LOCATION "${CEF_ROOT}/Release/libcef.so"
+        IMPORTED_LOCATION_DEBUG "${CEF_ROOT}/Debug/libcef.so"
+        IMPORTED_LOCATION_RELEASE "${CEF_ROOT}/Release/libcef.so"
+    )
+    
+    # Create libcef_dll_wrapper target
+    add_subdirectory("${CEF_ROOT}/libcef_dll" libcef_dll_wrapper)
 endif()
 
-# Convert PNG icon to ICO if needed
+# Convert PNG icon to ICO if needed (Windows only)
 if(WIN32)
     set(ICON_PNG "${CMAKE_SOURCE_DIR}/src/assets/icon.png")
     set(ICON_ICO "${CMAKE_SOURCE_DIR}/src/assets/icon.ico")
@@ -156,15 +167,36 @@ if(WIN32)
     endif()
 endif()
 
-# Add executable as Windows application (no console)
-add_executable(${PROJECT_NAME} WIN32
-    src/main.cpp
-    src/logger.cpp
-    src/app_config.cpp
-    src/simple_client.cpp
-    src/simple_app.cpp
-    src/gui/win32_dark.cpp
-)
+# Platform-specific source files
+set(PLATFORM_SOURCES)
+if(WIN32)
+    list(APPEND PLATFORM_SOURCES src/gui/win32_dark.cpp)
+elseif(UNIX AND NOT APPLE)
+    list(APPEND PLATFORM_SOURCES src/gui/linux/x11_dark.cpp)
+endif()
+
+# Add executable
+if(WIN32)
+    # Windows application (no console)
+    add_executable(${PROJECT_NAME} WIN32
+        src/main.cpp
+        src/logger.cpp
+        src/app_config.cpp
+        src/simple_client.cpp
+        src/simple_app.cpp
+        ${PLATFORM_SOURCES}
+    )
+else()
+    # Linux/Unix application
+    add_executable(${PROJECT_NAME}
+        src/main.cpp
+        src/logger.cpp
+        src/app_config.cpp
+        src/simple_client.cpp
+        src/simple_app.cpp
+        ${PLATFORM_SOURCES}
+    )
+endif()
 
 # Add Windows resource file
 if(WIN32)
@@ -174,6 +206,15 @@ endif()
 # Set target properties using CEF macros
 SET_EXECUTABLE_TARGET_PROPERTIES(${PROJECT_NAME})
 
+# Platform-specific libraries
+set(PLATFORM_LIBS)
+if(UNIX AND NOT APPLE)
+    # Linux-specific libraries
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(X11 REQUIRED x11)
+    list(APPEND PLATFORM_LIBS ${X11_LIBRARIES})
+endif()
+
 # Link SDL2 and CEF libraries
 target_link_libraries(${PROJECT_NAME}
     SDL2::SDL2
@@ -181,12 +222,18 @@ target_link_libraries(${PROJECT_NAME}
     libcef_lib
     libcef_dll_wrapper
     ${CEF_STANDARD_LIBS}
+    ${PLATFORM_LIBS}
 )
 
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CEF_ROOT}
 )
+
+# Platform-specific include directories
+if(UNIX AND NOT APPLE)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${X11_INCLUDE_DIRS})
+endif()
 
 # Copy CEF binaries and resources to output directory
 if(OS_WINDOWS)
@@ -206,6 +253,27 @@ if(OS_WINDOWS)
     
     # Copy app.zip for release builds
     if(CMAKE_BUILD_TYPE STREQUAL "Release" OR "$<CONFIG>" STREQUAL "Release")
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory
+            "${CEF_TARGET_OUT_DIR}/assets"
+            COMMENT "Creating assets directory"
+        )
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/src/assets/app.zip"
+            "${CEF_TARGET_OUT_DIR}/assets/app.zip"
+            COMMENT "Copying app.zip to release directory"
+        )
+    endif()
+elseif(OS_LINUX)
+    # Copy CEF binary files for Linux
+    COPY_FILES("${PROJECT_NAME}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
+    
+    # Copy CEF resource files for Linux
+    COPY_FILES("${PROJECT_NAME}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CEF_TARGET_OUT_DIR}")
+    
+    # Copy app.zip for release builds
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory
             "${CEF_TARGET_OUT_DIR}/assets"

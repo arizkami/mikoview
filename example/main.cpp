@@ -1,20 +1,23 @@
-// Remove the manual defines since CEF already defines them on command line
-// #define WIN32_LEAN_AND_MEAN
-// #define NOMINMAX
-#include <windows.h>
-
-// Undefine Windows macros that conflict with CEF
-#ifdef GetFirstChild
-#undef GetFirstChild
-#endif
-#ifdef GetNextSibling
-#undef GetNextSibling
-#endif
-#ifdef GetPrevSibling
-#undef GetPrevSibling
-#endif
-#ifdef GetParent
-#undef GetParent
+// Platform-specific includes
+#ifdef _WIN32
+    // Remove the manual defines since CEF already defines them on command line
+    // #define WIN32_LEAN_AND_MEAN
+    // #define NOMINMAX
+    #include <windows.h>
+    
+    // Undefine Windows macros that conflict with CEF
+    #ifdef GetFirstChild
+    #undef GetFirstChild
+    #endif
+    #ifdef GetNextSibling
+    #undef GetNextSibling
+    #endif
+    #ifdef GetPrevSibling
+    #undef GetPrevSibling
+    #endif
+    #ifdef GetParent
+    #undef GetParent
+    #endif
 #endif
 
 #include <SDL.h>
@@ -31,11 +34,12 @@
 #include "logger.hpp"
 #include "simple_client.hpp"
 #include "simple_app.hpp"
+#include "gui/platform_gui.hpp"
 
 // Global variables
 CefRefPtr<SimpleClient> g_client;
 SDL_Window* g_sdl_window = nullptr;
-HWND g_hwnd = nullptr;
+PlatformGUI::WindowHandle g_native_handle;
 bool g_running = true;
 bool g_window_shown = false;
 
@@ -66,6 +70,7 @@ void HandleSDLEvents() {
                     if (g_client && g_client->HasBrowsers()) {
                         CefRefPtr<CefBrowser> browser = g_client->GetFirstBrowser();
                         if (browser) {
+#ifdef _WIN32
                             HWND cef_hwnd = browser->GetHost()->GetWindowHandle();
                             if (cef_hwnd) {
                                 int width = event.window.data1;
@@ -73,6 +78,10 @@ void HandleSDLEvents() {
                                 SetWindowPos(cef_hwnd, nullptr, 0, 0, width, height,
                                            SWP_NOZORDER | SWP_NOACTIVATE);
                             }
+#elif defined(__linux__)
+                            // On Linux, CEF handles window resizing automatically with X11
+                            // The browser will resize with the parent window
+#endif
                         }
                     }
                 }
@@ -81,8 +90,12 @@ void HandleSDLEvents() {
     }
 }
 
-// Use WinMain instead of main for Windows applications without console
+// Cross-platform main function
+#ifdef _WIN32
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+#else
+int main(int argc, char* argv[]) {
+#endif
     // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         Logger::LogMessage("SDL could not initialize! SDL_Error: " + std::string(SDL_GetError()));
@@ -90,13 +103,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 
     void* sandbox_info = nullptr;
+#ifdef _WIN32
     CefMainArgs main_args(GetModuleHandle(nullptr));
+#else
+    CefMainArgs main_args(argc, argv);
+#endif
 
     // CEF sub-process check
     int exit_code = CefExecuteProcess(main_args, nullptr, sandbox_info);
     if (exit_code >= 0) {
         return exit_code;
     }
+
+    // Initialize platform-specific dark mode support
+    PlatformGUI::InitializeDarkMode();
 
     // Create SDL window (HIDDEN initially like Electron)
     std::string windowTitle = AppConfig::IsDebugMode() ? 
@@ -117,15 +137,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 
     // Get the native window handle
-    SDL_SysWMinfo wmInfo;
-    SDL_VERSION(&wmInfo.version);
-    if (SDL_GetWindowWMInfo(g_sdl_window, &wmInfo)) {
-        g_hwnd = wmInfo.info.win.window;
-    } else {
-        Logger::LogMessage("Could not get window handle!");
+    g_native_handle = PlatformGUI::GetNativeWindowHandle(g_sdl_window);
+#ifdef _WIN32
+    if (!g_native_handle) {
+#else
+    if (!g_native_handle.isValid()) {
+#endif
+        Logger::LogMessage("Could not get native window handle!");
         SDL_DestroyWindow(g_sdl_window);
         SDL_Quit();
         return 1;
+    }
+
+    // Apply dark theme if supported
+    if (PlatformGUI::IsDarkModeSupported()) {
+        PlatformGUI::ApplyDarkTheme(g_native_handle);
     }
 
     // CEF settings
@@ -150,14 +176,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     SDL_GetWindowSize(g_sdl_window, &width, &height);
 
     CefRect cef_rect(0, 0, width, height);
-    window_info.SetAsChild(g_hwnd, cef_rect);
+#ifdef _WIN32
+    window_info.SetAsChild(g_native_handle, cef_rect);
+#else
+    window_info.SetAsChild(g_native_handle.window, cef_rect);
+#endif
 
     CefBrowserSettings browser_settings;
     browser_settings.local_storage = STATE_ENABLED;
-    // Remove invalid properties - these don't exist in CefBrowserSettings
-    // browser_settings.javascript_close_windows = STATE_DISABLED;
-    // browser_settings.javascript_access_clipboard = STATE_DISABLED;
-    // browser_settings.plugins = STATE_DISABLED;
 
     g_client = new SimpleClient();
     
@@ -171,6 +197,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     // Log startup information
     Logger::LogMessage("=== MikoView CEF + SDL Application [ELECTRON-STYLE] ===");
     Logger::LogMessage("Mode: " + std::string(AppConfig::IsDebugMode() ? "DEBUG" : "RELEASE"));
+    Logger::LogMessage("Platform: " + std::string(
+#ifdef _WIN32
+        "Windows"
+#elif defined(__linux__)
+        "Linux"
+#else
+        "Unknown"
+#endif
+    ));
     Logger::LogMessage("URL: " + startupUrl);
     Logger::LogMessage("🔄 Window hidden until content loads (like Electron)...");
     if (AppConfig::IsDebugMode()) {
