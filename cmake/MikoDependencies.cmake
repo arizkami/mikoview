@@ -35,36 +35,42 @@ function(setup_cef)
     message(STATUS "Setting up CEF...")
     
     # Set CEF version
-    set(CEF_VERSION "138.0.27+g0b28f18+chromium-138.0.7204.158" PARENT_SCOPE)
+    set(CEF_VERSION "138.0.27+g0b28f18+chromium-138.0.7204.158")
     
     # Determine platform
     if(WIN32)
         if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-            set(CEF_PLATFORM "windows64" PARENT_SCOPE)
+            set(CEF_PLATFORM "windows64")
         else()
-            set(CEF_PLATFORM "windows32" PARENT_SCOPE)
+            set(CEF_PLATFORM "windows32")
         endif()
     elseif(APPLE)
-        set(CEF_PLATFORM "macosx64" PARENT_SCOPE)
+        set(CEF_PLATFORM "macosx64")
     else()
         if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-            set(CEF_PLATFORM "linux64" PARENT_SCOPE)
+            set(CEF_PLATFORM "linux64")
         else()
-            set(CEF_PLATFORM "linux32" PARENT_SCOPE)
+            set(CEF_PLATFORM "linux32")
         endif()
     endif()
     
-    # Set CEF paths
-    set(CEF_DOWNLOAD_URL "https://cef-builds.spotifycdn.com/cef_binary_${CEF_VERSION}_${CEF_PLATFORM}.tar.bz2" PARENT_SCOPE)
+    # Set variables in parent scope
+    set(CEF_VERSION "${CEF_VERSION}" PARENT_SCOPE)
+    set(CEF_PLATFORM "${CEF_PLATFORM}" PARENT_SCOPE)
     set(CEF_ROOT "${CMAKE_BINARY_DIR}/cef" PARENT_SCOPE)
-    set(CEF_ARCHIVE "${CMAKE_BINARY_DIR}/cef_binary.tar.bz2" PARENT_SCOPE)
-    set(CEF_EXTRACTED_DIR "${CMAKE_BINARY_DIR}/cef_binary_${CEF_VERSION}_${CEF_PLATFORM}" PARENT_SCOPE)
     
-    message(STATUS "CEF configuration complete")
+    message(STATUS "CEF configuration complete - Version: ${CEF_VERSION}, Platform: ${CEF_PLATFORM}")
 endfunction()
 
 # Function to download and extract CEF
-function(download_cef)
+# Function to download and extract CEF
+function(download_cef CEF_VERSION CEF_PLATFORM)
+    # Construct the download URL with proper variables
+    set(CEF_DOWNLOAD_URL "https://cef-builds.spotifycdn.com/cef_binary_${CEF_VERSION}_${CEF_PLATFORM}.tar.bz2")
+    set(CEF_ROOT "${CMAKE_BINARY_DIR}/cef")
+    set(CEF_ARCHIVE "${CMAKE_BINARY_DIR}/cef_binary.tar.bz2")
+    set(CEF_EXTRACTED_DIR "${CMAKE_BINARY_DIR}/cef_binary_${CEF_VERSION}_${CEF_PLATFORM}")
+    
     if(NOT EXISTS "${CEF_ROOT}")
         message(STATUS "Downloading CEF from ${CEF_DOWNLOAD_URL}")
         
@@ -101,6 +107,9 @@ function(download_cef)
     else()
         message(STATUS "CEF already exists at ${CEF_ROOT}")
     endif()
+    
+    # Set variables in parent scope
+    set(CEF_ROOT "${CEF_ROOT}" PARENT_SCOPE)
 endfunction()
 
 # Function to configure CEF libraries
@@ -163,7 +172,7 @@ function(setup_all_dependencies)
     
     # Setup CEF
     setup_cef()
-    download_cef()
+    download_cef("${CEF_VERSION}" "${CEF_PLATFORM}")
     configure_cef_libraries()
     
     # Setup platform-specific dependencies

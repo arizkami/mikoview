@@ -6,8 +6,8 @@
 #include <memory>
 
 // MikoView core components
-#include "mikoview/simple_app.hpp"
-#include "mikoview/simple_client.hpp"
+#include "mikoview/mikoapp.hpp"
+#include "mikoview/mikoclient.hpp"
 #include "mikoview/logger.hpp"
 
 // MikoView GUI components

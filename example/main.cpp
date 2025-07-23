@@ -30,11 +30,11 @@
 #include <chrono>
 
 // Local includes
-#include "app_config.hpp"
-#include "logger.hpp"
-#include "simple_client.hpp"
-#include "simple_app.hpp"
-#include "gui/platform_gui.hpp"
+#include <mikoview/app_config.hpp>
+#include <mikoview/logger.hpp>
+#include <mikoview/mikoclient.hpp>
+#include <mikoview/mikoapp.hpp>
+#include <mikoview/gui/platform_gui.hpp>
 
 // Global variables
 CefRefPtr<SimpleClient> g_client;

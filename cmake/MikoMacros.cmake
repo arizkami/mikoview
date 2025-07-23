@@ -150,8 +150,9 @@ function(setup_mikoview_framework)
     # Create framework library
     add_library(mikoview_framework STATIC
         mikoview.cpp
-        mikoview/simple_app.cpp
-        mikoview/simple_client.cpp
+        mikoview/mikoapp.cpp
+        mikoview/mikoclient.cpp
+        mikoview/app_config.cpp
         mikoview/logger.cpp
         mikoview/jsapi/invoke.cpp
         mikoview/jsapi/filesystem.cpp
