@@ -160,6 +160,7 @@ endif()
 add_executable(${PROJECT_NAME} WIN32
     src/main.cpp
     src/logger.cpp
+    src/app_config.cpp
     src/simple_client.cpp
     src/simple_app.cpp
 )
@@ -202,13 +203,18 @@ if(OS_WINDOWS)
         COMMENT "Copying SDL2 DLL to output directory"
     )
     
-    # Copy React build assets for release builds
+    # Copy app.zip for release builds
     if(CMAKE_BUILD_TYPE STREQUAL "Release" OR "$<CONFIG>" STREQUAL "Release")
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CMAKE_SOURCE_DIR}/renderer/dist"
+            COMMAND ${CMAKE_COMMAND} -E make_directory
             "${CEF_TARGET_OUT_DIR}/assets"
-            COMMENT "Copying React build assets to release directory"
+            COMMENT "Creating assets directory"
+        )
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/src/assets/app.zip"
+            "${CEF_TARGET_OUT_DIR}/assets/app.zip"
+            COMMENT "Copying app.zip to release directory"
         )
     endif()
 endif()

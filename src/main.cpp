@@ -87,7 +87,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // Create SDL window
     std::string windowTitle = AppConfig::IsDebugMode() ? 
-        "SwipeIDE - Development Mode" : "SwipeIDE - Release Mode";
+        "MikoView - Development Mode" : "MikoView - Release Mode";
     
     g_sdl_window = SDL_CreateWindow(
         windowTitle.c_str(),
@@ -119,7 +119,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     CefSettings settings;
     settings.no_sandbox = true;
     settings.multi_threaded_message_loop = false;
-    
+
     if (AppConfig::IsDebugMode()) {
         settings.remote_debugging_port = 9222;
         settings.log_severity = LOGSEVERITY_INFO;
@@ -132,18 +132,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     CefWindowInfo window_info;
     int width, height;
     SDL_GetWindowSize(g_sdl_window, &width, &height);
-    
+
     CefRect cef_rect(0, 0, width, height);
     window_info.SetAsChild(g_hwnd, cef_rect);
 
     CefBrowserSettings browser_settings;
+    // Only keep the local_storage setting - remove the invalid properties
+    browser_settings.local_storage = STATE_ENABLED;
+
     g_client = new SimpleClient();
     std::string startupUrl = AppConfig::GetStartupUrl();
     
     CefBrowserHost::CreateBrowser(window_info, g_client, startupUrl, browser_settings, nullptr, nullptr);
 
     // Log startup information
-    Logger::LogMessage("=== SwipeIDE CEF + SDL Application ===");
+    Logger::LogMessage("=== MikoView CEF + SDL Application ===");
     Logger::LogMessage("Mode: " + std::string(AppConfig::IsDebugMode() ? "DEBUG" : "RELEASE"));
     Logger::LogMessage("URL: " + startupUrl);
     if (AppConfig::IsDebugMode()) {

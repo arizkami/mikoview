@@ -12,7 +12,7 @@ export function App() {
             <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center">
               <Code className="w-8 h-8 text-black" />
             </div>
-            <h1 className="text-4xl font-bold text-white">SwipeWebview</h1>
+            <h1 className="text-4xl font-bold text-white">MikoView</h1>
           </div>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
             A powerful desktop application built with modern web technologies and native performance
@@ -44,18 +44,6 @@ export function App() {
             <h3 className="text-lg font-semibold text-white mb-2">SDL Window</h3>
             <p className="text-gray-400 text-sm">Cross-platform window management and event handling</p>
           </div>
-        </div>
-
-        {/* Get Started Section */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 rounded-full text-sm text-gray-300 mb-6">
-            <Zap className="w-4 h-4" />
-            Get started by editing
-          </div>
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 max-w-md mx-auto">
-            <code className="text-blue-400 font-mono text-sm">src/App.tsx</code>
-          </div>
-          <p className="text-gray-500 text-sm mt-3">Save to see your changes instantly</p>
         </div>
 
         {/* Features Grid */}
@@ -103,16 +91,6 @@ export function App() {
             </div>
           </div>
         </div>
-
-        {/* API Tester Section */}
-        <div className="border border-gray-800 rounded-xl bg-gray-900/30 p-8">
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold text-white mb-2">API Testing</h2>
-            <p className="text-gray-400">Test your API endpoints directly from the interface</p>
-          </div>
-          <APITester />
-        </div>
-
         {/* Footer */}
         <footer className="text-center mt-16 pt-8 border-t border-gray-800">
           <p className="text-gray-500 text-sm">

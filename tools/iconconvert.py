@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Icon Converter for SwipeIDE
+Icon Converter for MikoView
 Converts PNG images to ICO format for Windows applications
 """
 

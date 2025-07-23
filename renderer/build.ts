@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { build, type BuildConfig } from "bun";
 import plugin from "bun-plugin-tailwind";
-import { existsSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import { rm } from "fs/promises";
 import path from "path";
 
@@ -14,6 +14,7 @@ Usage: bun run build.ts [options]
 
 Common Options:
   --outdir <path>          Output directory (default: "dist")
+  --singlefile             Bundle CSS, JS, and assets into single HTML file
   --minify                 Enable minification (or --minify.whitespace, --minify.syntax, etc)
   --source-map <type>      Sourcemap type: none|linked|inline|external
   --target <target>        Build target: browser|bun|node
@@ -31,6 +32,7 @@ Common Options:
 
 Example:
   bun run build.ts --outdir=dist --minify --source-map=linked --external=react,react-dom
+  bun run build.ts --singlefile --minify
 `);
   process.exit(0);
 }
@@ -121,11 +123,75 @@ const formatFileSize = (bytes: number): string => {
   return `${size.toFixed(2)} ${units[unitIndex]}`;
 };
 
+// Helper function to inline assets into HTML
+const inlineAssets = async (htmlPath: string, outputs: any[]): Promise<void> => {
+  let htmlContent = readFileSync(htmlPath, 'utf-8');
+  const htmlDir = path.dirname(htmlPath);
+  
+  // Find corresponding JS and CSS files
+  const jsFiles = outputs.filter(output => output.kind === 'entry-point' && output.path.endsWith('.js'));
+  const cssFiles = outputs.filter(output => output.kind === 'asset' && output.path.endsWith('.css'));
+  
+  // Inline CSS files
+  for (const cssFile of cssFiles) {
+    const cssContent = readFileSync(cssFile.path, 'utf-8');
+    const cssFileName = path.basename(cssFile.path);
+    
+    // Replace CSS link tags with inline styles
+    const cssLinkRegex = new RegExp(`<link[^>]*href=["']([^"']*${cssFileName})["'][^>]*>`, 'gi');
+    htmlContent = htmlContent.replace(cssLinkRegex, `<style>${cssContent}</style>`);
+  }
+  
+  // Inline JS files
+  for (const jsFile of jsFiles) {
+    const jsContent = readFileSync(jsFile.path, 'utf-8');
+    const jsFileName = path.basename(jsFile.path);
+    
+    // Replace script src tags with inline scripts
+    const scriptSrcRegex = new RegExp(`<script[^>]*src=["']([^"']*${jsFileName})["'][^>]*></script>`, 'gi');
+    htmlContent = htmlContent.replace(scriptSrcRegex, `<script>${jsContent}</script>`);
+  }
+  
+  // Handle other assets (images, fonts, etc.) by converting to data URLs
+  const assetFiles = outputs.filter(output => 
+    output.kind === 'asset' && 
+    !output.path.endsWith('.css') && 
+    !output.path.endsWith('.js') &&
+    !output.path.endsWith('.html')
+  );
+  
+  for (const assetFile of assetFiles) {
+    const assetContent = readFileSync(assetFile.path);
+    const assetFileName = path.basename(assetFile.path);
+    const ext = path.extname(assetFile.path).toLowerCase();
+    
+    // Determine MIME type
+    let mimeType = 'application/octet-stream';
+    if (ext === '.png') mimeType = 'image/png';
+    else if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
+    else if (ext === '.gif') mimeType = 'image/gif';
+    else if (ext === '.svg') mimeType = 'image/svg+xml';
+    else if (ext === '.woff') mimeType = 'font/woff';
+    else if (ext === '.woff2') mimeType = 'font/woff2';
+    else if (ext === '.ttf') mimeType = 'font/ttf';
+    
+    const dataUrl = `data:${mimeType};base64,${assetContent.toString('base64')}`;
+    
+    // Replace asset references with data URLs
+    const assetRegex = new RegExp(`(["'])([^"']*${assetFileName})(["'])`, 'gi');
+    htmlContent = htmlContent.replace(assetRegex, `$1${dataUrl}$3`);
+  }
+  
+  // Write the modified HTML back
+  writeFileSync(htmlPath, htmlContent, 'utf-8');
+};
+
 console.log("\n🚀 Starting build process...\n");
 
 // Parse CLI arguments with our magical parser
 const cliConfig = parseArgs();
 const outdir = cliConfig.outdir || path.join(process.cwd(), "dist");
+const singleFile = (cliConfig as any).singlefile || false;
 
 if (existsSync(outdir)) {
   console.log(`🗑️ Cleaning previous build at ${outdir}`);
@@ -140,30 +206,67 @@ const entrypoints = [...new Bun.Glob("**.html").scanSync("src")]
   .filter(dir => !dir.includes("node_modules"));
 console.log(`📄 Found ${entrypoints.length} HTML ${entrypoints.length === 1 ? "file" : "files"} to process\n`);
 
-// Build all the HTML files
-const result = await build({
+// Build configuration
+const buildConfig: BuildConfig = {
   entrypoints,
   outdir,
   plugins: [plugin],
   minify: true,
   target: "browser",
-  sourcemap: "linked",
+  sourcemap: singleFile ? "none" : "linked", // Disable sourcemaps for single file builds
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
   },
   ...cliConfig, // Merge in any CLI-provided options
-});
+};
+
+// Remove singlefile from build config as it's not a Bun build option
+delete (buildConfig as any).singlefile;
+
+// Build all the HTML files
+const result = await build(buildConfig);
+
+// If singlefile mode is enabled, inline all assets
+if (singleFile) {
+  console.log("📦 Inlining assets into HTML files...");
+  
+  const htmlFiles = result.outputs.filter(output => output.path.endsWith('.html'));
+  
+  for (const htmlFile of htmlFiles) {
+    await inlineAssets(htmlFile.path, result.outputs);
+  }
+  
+  // Remove separate CSS and JS files since they're now inlined
+  const filesToRemove = result.outputs.filter(output => 
+    !output.path.endsWith('.html') && 
+    (output.path.endsWith('.css') || output.path.endsWith('.js'))
+  );
+  
+  for (const file of filesToRemove) {
+    if (existsSync(file.path)) {
+      await rm(file.path, { force: true });
+    }
+  }
+  
+  console.log("✨ Assets successfully inlined into HTML files");
+}
 
 // Print the results
 const end = performance.now();
 
-const outputTable = result.outputs.map(output => ({
-  "File": path.relative(process.cwd(), output.path),
-  "Type": output.kind,
-  "Size": formatFileSize(output.size),
-}));
+const outputTable = result.outputs
+  .filter(output => singleFile ? output.path.endsWith('.html') : true)
+  .map(output => ({
+    "File": path.relative(process.cwd(), output.path),
+    "Type": output.kind,
+    "Size": formatFileSize(output.size),
+  }));
 
 console.table(outputTable);
 const buildTime = (end - start).toFixed(2);
 
-console.log(`\n✅ Build completed in ${buildTime}ms\n`);
+if (singleFile) {
+  console.log(`\n✅ Single-file build completed in ${buildTime}ms\n`);
+} else {
+  console.log(`\n✅ Build completed in ${buildTime}ms\n`);
+}
