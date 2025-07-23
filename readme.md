@@ -9,7 +9,7 @@
 ![Build System](https://img.shields.io/badge/build-CMake-red)
 ![Version](https://img.shields.io/badge/version-0.1.0--dev-orange)
 
-A modern, production-ready desktop application framework built with React/Vue, CEF (Chromium Embedded Framework), and SDL2. MikoView provides an Electron-like development experience with native performance and cross-platform compatibility.
+A modern, production-ready desktop application framework built with React/Vue, CEF (Chromium Embedded Framework), and SDL2. MikoView provides an WebView development experience with native performance and cross-platform compatibility.
 
 ## ✨ Features
 
