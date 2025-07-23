@@ -23,6 +23,8 @@
 #include "include/cef_browser.h"
 #include "include/wrapper/cef_helpers.h"
 #include <filesystem>
+#include <functional>
+#include <chrono>
 
 // Local includes
 #include "app_config.hpp"
@@ -35,6 +37,17 @@ CefRefPtr<SimpleClient> g_client;
 SDL_Window* g_sdl_window = nullptr;
 HWND g_hwnd = nullptr;
 bool g_running = true;
+bool g_window_shown = false;
+
+// Function to show the window when content is ready
+void ShowWindowWhenReady() {
+    if (!g_window_shown && g_sdl_window) {
+        Logger::LogMessage("✨ Showing window - content is ready!");
+        SDL_ShowWindow(g_sdl_window);
+        SDL_RaiseWindow(g_sdl_window);
+        g_window_shown = true;
+    }
+}
 
 // Handle SDL events
 void HandleSDLEvents() {
@@ -85,7 +98,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return exit_code;
     }
 
-    // Create SDL window
+    // Create SDL window (HIDDEN initially like Electron)
     std::string windowTitle = AppConfig::IsDebugMode() ? 
         "MikoView - Development Mode" : "MikoView - Release Mode";
     
@@ -94,7 +107,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         1200, 800,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
+        SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN  // Start HIDDEN
     );
 
     if (!g_sdl_window) {
@@ -119,10 +132,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     CefSettings settings;
     settings.no_sandbox = true;
     settings.multi_threaded_message_loop = false;
+    settings.background_color = 0xFFFFFFFF; // White background for faster rendering
 
     if (AppConfig::IsDebugMode()) {
         settings.remote_debugging_port = 9222;
         settings.log_severity = LOGSEVERITY_INFO;
+    } else {
+        settings.log_severity = LOGSEVERITY_WARNING;
     }
 
     CefRefPtr<SimpleApp> app(new SimpleApp);
@@ -137,28 +153,50 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     window_info.SetAsChild(g_hwnd, cef_rect);
 
     CefBrowserSettings browser_settings;
-    // Only keep the local_storage setting - remove the invalid properties
     browser_settings.local_storage = STATE_ENABLED;
+    // Remove invalid properties - these don't exist in CefBrowserSettings
+    // browser_settings.javascript_close_windows = STATE_DISABLED;
+    // browser_settings.javascript_access_clipboard = STATE_DISABLED;
+    // browser_settings.plugins = STATE_DISABLED;
 
     g_client = new SimpleClient();
+    
+    // Set callback to show window when content is ready
+    g_client->SetReadyCallback(ShowWindowWhenReady);
+    
     std::string startupUrl = AppConfig::GetStartupUrl();
     
     CefBrowserHost::CreateBrowser(window_info, g_client, startupUrl, browser_settings, nullptr, nullptr);
 
     // Log startup information
-    Logger::LogMessage("=== MikoView CEF + SDL Application ===");
+    Logger::LogMessage("=== MikoView CEF + SDL Application [ELECTRON-STYLE] ===");
     Logger::LogMessage("Mode: " + std::string(AppConfig::IsDebugMode() ? "DEBUG" : "RELEASE"));
     Logger::LogMessage("URL: " + startupUrl);
+    Logger::LogMessage("🔄 Window hidden until content loads (like Electron)...");
     if (AppConfig::IsDebugMode()) {
         Logger::LogMessage("Remote debugging: http://localhost:9222");
         Logger::LogMessage("Make sure React dev server is running: cd renderer && bun run dev");
     }
     Logger::LogMessage("======================================");
 
+    // Timeout fallback - show window after 10 seconds even if not ready
+    auto start_time = std::chrono::steady_clock::now();
+    const auto timeout_duration = std::chrono::seconds(10);
+
     // Main loop
     while (g_running) {
         HandleSDLEvents();
         CefDoMessageLoopWork();
+        
+        // Timeout fallback
+        if (!g_window_shown) {
+            auto current_time = std::chrono::steady_clock::now();
+            if (current_time - start_time > timeout_duration) {
+                Logger::LogMessage("⏰ Timeout reached - showing window anyway");
+                ShowWindowWhenReady();
+            }
+        }
+        
         SDL_Delay(1); // Small delay to prevent 100% CPU usage
     }
 

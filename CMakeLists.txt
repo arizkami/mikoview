@@ -163,6 +163,7 @@ add_executable(${PROJECT_NAME} WIN32
     src/app_config.cpp
     src/simple_client.cpp
     src/simple_app.cpp
+    src/gui/win32_dark.cpp
 )
 
 # Add Windows resource file

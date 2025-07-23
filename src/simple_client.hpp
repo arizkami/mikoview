@@ -5,6 +5,7 @@
 #include "include/cef_load_handler.h"
 #include "include/cef_task.h"
 #include <list>
+#include <functional>  // Add this for std::function
 
 class SimpleClient;
 
@@ -51,16 +52,25 @@ public:
     virtual void OnLoadStart(CefRefPtr<CefBrowser> browser,
                             CefRefPtr<CefFrame> frame,
                             TransitionType transition_type) override;
+    virtual void OnLoadEnd(CefRefPtr<CefBrowser> browser,
+                          CefRefPtr<CefFrame> frame,
+                          int httpStatusCode) override;
 
     // Browser management
     void CloseAllBrowsers(bool force_close);
     void DoCloseAllBrowsers(bool force_close);
     CefRefPtr<CefBrowser> GetFirstBrowser();
     bool HasBrowsers();
+    
+    // Preload status
+    bool IsContentReady() const { return content_ready_; }
+    void SetReadyCallback(std::function<void()> callback) { ready_callback_ = callback; }
 
 private:
     typedef std::list<CefRefPtr<CefBrowser>> BrowserList;
     BrowserList browser_list_;
+    bool content_ready_;
+    std::function<void()> ready_callback_; // Callback when content is ready
 
     IMPLEMENT_REFCOUNTING(SimpleClient);
 };

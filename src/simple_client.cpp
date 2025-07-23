@@ -4,6 +4,7 @@
 #include "include/wrapper/cef_helpers.h"
 #include "include/cef_app.h"
 #include <SDL.h>
+#include <functional>
 
 // Global variables (declared in main.cpp)
 extern SDL_Window* g_sdl_window;
@@ -18,7 +19,7 @@ void CloseBrowserTask::Execute() {
 }
 
 // SimpleClient implementation
-SimpleClient::SimpleClient() {
+SimpleClient::SimpleClient() : content_ready_(false), ready_callback_(nullptr) {
 }
 
 CefRefPtr<CefDisplayHandler> SimpleClient::GetDisplayHandler() {
@@ -55,8 +56,24 @@ void SimpleClient::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
     
     std::string mode = AppConfig::IsDebugMode() ? "DEBUG" : "RELEASE";
     std::string url = AppConfig::GetStartupUrl();
-    Logger::LogMessage("CEF Browser started in " + mode + " mode");
+    Logger::LogMessage("CEF Browser created in " + mode + " mode (HIDDEN)");
     Logger::LogMessage("Loading URL: " + url);
+}
+
+void SimpleClient::OnLoadEnd(CefRefPtr<CefBrowser> browser,
+                            CefRefPtr<CefFrame> frame,
+                            int httpStatusCode) {
+    CEF_REQUIRE_UI_THREAD();
+    
+    if (frame->IsMain() && !content_ready_) {
+        content_ready_ = true;
+        Logger::LogMessage("🚀 Content fully loaded! Showing window...");
+        
+        // Call the ready callback to show the window
+        if (ready_callback_) {
+            ready_callback_();
+        }
+    }
 }
 
 bool SimpleClient::DoClose(CefRefPtr<CefBrowser> browser) {
@@ -91,6 +108,16 @@ void SimpleClient::OnLoadError(CefRefPtr<CefBrowser> browser,
 
     if (errorCode == ERR_ABORTED)
         return;
+
+    // Show window even on error
+    if (frame->IsMain() && !content_ready_) {
+        content_ready_ = true;
+        Logger::LogMessage("⚠️ Load error occurred, showing window anyway...");
+        
+        if (ready_callback_) {
+            ready_callback_();
+        }
+    }
 
     if (AppConfig::IsDebugMode() && failedUrl.ToString().find("localhost:3000") != std::string::npos) {
         std::string errorHtml = R"(
@@ -136,7 +163,7 @@ void SimpleClient::OnLoadStart(CefRefPtr<CefBrowser> browser,
     
     if (frame->IsMain()) {
         std::string mode = AppConfig::IsDebugMode() ? "DEBUG" : "RELEASE";
-        Logger::LogMessage("Loading page in " + mode + " mode...");
+        Logger::LogMessage("Loading page in " + mode + " mode (WINDOW HIDDEN)...");
     }
 }
 
