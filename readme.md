@@ -4,161 +4,314 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
 ![Language](https://img.shields.io/badge/language-C%2B%2B17-blue)
 ![Framework](https://img.shields.io/badge/framework-CEF%20%7C%20SDL2-green)
-![Frontend](https://img.shields.io/badge/frontend-React%20%7C%20TypeScript-61DAFB)
+![Frontend](https://img.shields.io/badge/frontend-React%20%7C%20Vue%20%7C%20TypeScript-61DAFB)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Build System](https://img.shields.io/badge/build-CMake-red)
 ![Version](https://img.shields.io/badge/version-0.1.0--dev-orange)
 
-A modern desktop WebView built with React, CEF (Chromium Embedded Framework), and SDL2.
+A modern, production-ready desktop application framework built with React/Vue, CEF (Chromium Embedded Framework), and SDL2. MikoView provides an Electron-like development experience with native performance and cross-platform compatibility.
 
-## Features
+## ✨ Features
 
-- Modern React-based user interface
-- Native desktop application using CEF
-- Cross-platform window management with SDL2
-- Hot reload development server
-- Integrated API testing capabilities
+### 🚀 **Core Framework**
+- **Modern C++17** architecture with clean API design
+- **Production-ready** framework with modular CMake build system
+- **Cross-platform** support (Windows, Linux, macOS)
+- **Electron-style** window behavior (hidden until content loads)
+- **Dark mode** support with native OS integration
+- **Hot reload** development server integration
 
-## Prerequisites
+### 🎨 **Frontend Flexibility**
+- **React** with TypeScript support
+- **Vue.js** with modern tooling
+- **Bun** runtime for fast development
+- **API testing** capabilities built-in
+- **Asset bundling** and optimization
 
-- **Windows**: Visual Studio 2019 or later with C++ development tools
-- **CMake**: Version 3.20 or higher
-- **Git**: For cloning dependencies
-- **Node.js/Bun**: For React development (optional, for frontend development)
+### 🔧 **Developer Experience**
+- **Modular CMake** system with automatic dependency management
+- **Automatic CEF/SDL2** download and configuration
+- **Remote debugging** support (Chrome DevTools)
+- **Comprehensive logging** system
+- **JavaScript API** for native integration
+- **Production packaging** (NSIS for Windows, DEB for Linux)
 
-## Building
+## 📋 Prerequisites
 
-### 1. Clone the Repository
+### Windows
+- **Visual Studio 2019** or later with C++ development tools
+- **CMake** 3.19 or higher
+- **Git** for dependency management
+- **NSIS** (optional, for creating installers)
+
+### Linux
+- **GCC 9+** or **Clang 10+** with C++17 support
+- **CMake** 3.19 or higher
+- **Git** for dependency management
+- **X11 development libraries**
+- **dpkg-dev** (optional, for creating .deb packages)
+
+### Development (Optional)
+- **Bun** or **Node.js** for frontend development
+- **TypeScript** for enhanced development experience
+
+## 🚀 Quick Start
+
+### 1. Clone and Build
 
 ```bash
+# Clone the repository
 git clone https://github.com/arizkami/mikoview
 cd mikoview
+
+# Configure and build
+cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+
+# Run the application
+.\build\Release\MikoView.exe  # Windows
+./build/MikoView                # Linux
 ```
 
-### 2. Build the Project
+### 2. Development Mode
 
 ```bash
-# Create build directory
-mkdir build
-cd build
-
-# Configure with CMake
-cmake ..
-
-# Build the project
-cmake --build . --config Release
-```
-
-### 3. Development Build (Debug)
-
-```bash
-# For debug build with console output
-cmake --build . --config Debug
-```
-
-## Usage
-
-### Running the Application
-
-After building, run the executable from the build directory:
-
-```bash
-# Release build
-.\Release\mikoview.exe
-
-# Debug build
-.\Debug\mikoview.exe
-```
-
-### Development Mode
-
-In debug mode, the application will attempt to connect to a React development server at `http://localhost:3000`. To start the development server:
-
-```bash
-cd renderer
+# Start frontend development server
+cd renderer/react  # or renderer/vue
 bun install
 bun run dev
+
+# Build in debug mode (connects to dev server)
+cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --config Debug
+.\build\Debug\MikoView.exe
 ```
 
-### Production Mode
+### 3. Create Production Installer
 
-In release mode, the application loads the built React assets from the local `renderer/dist` directory.
+```bash
+# Generate installer packages
+python tools/makeinstaller.py
+```
 
-## Project Structure
+## 🏗️ Project Architecture
 
 ```
 mikoview/
-├── src/                    # C++ source files
-│   ├── main.cpp           # Application entry point
-│   ├── simple_app.*       # CEF application setup
-│   ├── simple_client.*    # CEF browser client
-│   └── logger.*           # Logging utilities
-├── renderer/              # React frontend
-│   ├── src/               # React source files
-│   ├── package.json       # Node.js dependencies
-│   └── dist/              # Built assets (generated)
-├── CMakeLists.txt         # Build configuration
-└── README.md              # This file
+├── 📁 cmake/                   # Modular CMake system
+│   ├── MikoConfig.cmake        # Project configuration
+│   ├── MikoDependencies.cmake  # External dependencies
+│   ├── MikoMacros.cmake        # Reusable functions
+│   └── MikoPlatform.cmake      # Platform detection
+├── 📁 mikoview/                # Core framework
+│   ├── 📁 gui/                 # Platform-specific GUI
+│   ├── 📁 jsapi/               # JavaScript API bridge
+│   ├── mikoapp.hpp/cpp         # CEF application
+│   ├── mikoclient.hpp/cpp      # CEF browser client
+│   ├── logger.hpp/cpp          # Logging system
+│   └── app_config.hpp/cpp      # Configuration management
+├── 📁 example/                 # Example application
+│   ├── main.cpp                # Application entry point
+│   └── 📁 assets/              # Application resources
+├── 📁 renderer/                # Frontend frameworks
+│   ├── 📁 react/               # React + TypeScript
+│   ├── 📁 vue/                 # Vue.js + TypeScript
+│   └── 📁 api/                 # API testing tools
+├── 📁 tools/                   # Build and packaging tools
+│   ├── makeinstaller.py        # Installer generator
+│   └── iconconvert.py          # Icon conversion utility
+├── 📁 docs/                    # Documentation
+├── mikoview.hpp                # Main framework header
+├── mikoview.cpp                # Framework implementation
+└── CMakeLists.txt              # Main build configuration
 ```
 
-## Development
+## 🔧 Framework Usage
 
-### Frontend Development
+### Simple Application
 
-The frontend is built with React and TypeScript. To work on the frontend:
+```cpp
+#include "mikoview.hpp"
+
+int main() {
+    // One-liner application
+    return MikoView::Quick::RunApp(
+        "http://localhost:3000",  // URL
+        "My Application",         // Title
+        true                       // Debug mode
+    );
+}
+```
+
+### Advanced Configuration
+
+```cpp
+#include "mikoview.hpp"
+
+int main() {
+    MikoView::Config config;
+    config.window_title = "Production App";
+    config.window_width = 1400;
+    config.window_height = 900;
+    config.debug_mode = false;
+    config.startup_url = "file:///app/index.html";
+    config.start_hidden = true;  // Electron-style
+    
+    auto app = MikoView::Quick::CreateApp(config);
+    if (!app) {
+        return -1;
+    }
+    
+    // Set callbacks
+    app->SetReadyCallback([]() {
+        MikoView::Utils::LogInfo("Application ready!");
+    });
+    
+    return app->Run();
+}
+```
+
+## 🎨 Frontend Development
+
+### React Development
 
 ```bash
-cd renderer
+cd renderer/react
 bun install
-bun run dev
+bun run dev      # Development server
+bun run build    # Production build
+bun run preview  # Preview production build
 ```
 
-This starts a development server at `http://localhost:3000` that the debug build will automatically connect to.
+### Vue Development
 
-### Backend Development
+```bash
+cd renderer/vue
+npm install
+npm run dev      # Development server
+npm run build    # Production build
+npm run preview  # Preview production build
+```
 
-The C++ backend handles:
-- Window management (SDL2)
-- Browser embedding (CEF)
-- Application lifecycle
-- Logging
+### JavaScript API Integration
 
-Modify the source files in the `src/` directory and rebuild using CMake.
+```javascript
+// Call native functions from JavaScript
+window.mikoview.invoke('showNotification', {
+    title: 'Hello',
+    message: 'From native code!'
+});
 
-### Logging
+// File system access
+const files = await window.mikoview.invoke('readDirectory', '/path/to/dir');
+```
 
-The application logs to `mikoview.log` in the executable directory. Check this file for debugging information.
+## 🔧 Build Configuration
 
-## Dependencies
+### CMake Options
 
-The project automatically downloads and builds the following dependencies:
+```bash
+# Enable/disable features
+cmake -B build -S . \
+  -DMIKO_BUILD_EXAMPLES=ON \
+  -DMIKO_BUILD_TESTS=OFF \
+  -DMIKO_ENABLE_LOGGING=ON \
+  -DCMAKE_BUILD_TYPE=Release
+```
 
-- **CEF (Chromium Embedded Framework)**: For embedding the web browser
-- **SDL2**: For cross-platform window management
-- **React**: Frontend framework (managed separately in renderer/)
+### Platform-Specific Options
 
-## Troubleshooting
+```bash
+# Windows with console (debug)
+cmake -B build -S . -DMIKO_WIN32_CONSOLE=ON
+
+# Linux with specific CEF version
+cmake -B build -S . -DCEF_VERSION="120.1.10+g3ce3184+chromium-120.0.6099.129"
+```
+
+## 📦 Packaging and Distribution
+
+### Windows Installer (NSIS)
+
+```bash
+python tools/makeinstaller.py --platform windows
+# Generates: MikoView-Setup.exe
+```
+
+### Linux Package (DEB)
+
+```bash
+python tools/makeinstaller.py --platform linux
+# Generates: mikoview_0.1.0_amd64.deb
+```
+
+### Manual Packaging
+
+```bash
+# Using CPack
+cd build
+cpack -G NSIS     # Windows
+cpack -G DEB      # Linux
+```
+
+## 🐛 Troubleshooting
 
 ### Build Issues
 
-1. **CMake not found**: Ensure CMake is installed and in your PATH
-2. **Visual Studio errors**: Make sure you have the C++ development workload installed
-3. **CEF download fails**: Check your internet connection and firewall settings
+| Issue | Solution |
+|-------|----------|
+| **CMake not found** | Install CMake 3.19+ and add to PATH |
+| **CEF download fails** | Check internet connection and firewall |
+| **Visual Studio errors** | Install C++ development workload |
+| **Linux build fails** | Install X11 development libraries |
 
 ### Runtime Issues
 
-1. **Application won't start**: Check `mikoview.log` for error messages
-2. **React dev server connection fails**: Ensure the dev server is running on port 3000
-3. **Window not responding**: Try rebuilding in debug mode for more detailed logging
+| Issue | Solution |
+|-------|----------|
+| **Application won't start** | Check `mikoview.log` for errors |
+| **Dev server connection fails** | Ensure React/Vue dev server is running |
+| **Window not showing** | Check timeout settings in debug mode |
+| **JavaScript API not working** | Verify invoke handlers are registered |
 
-## Contributing
+### Debug Mode
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+```bash
+# Enable detailed logging
+export MIKO_LOG_LEVEL=DEBUG  # Linux
+set MIKO_LOG_LEVEL=DEBUG     # Windows
 
-## License
+# Remote debugging (Chrome DevTools)
+# Open: http://localhost:9222
+```
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+## 🤝 Contributing
+
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. **Push** to the branch (`git push origin feature/amazing-feature`)
+5. **Open** a Pull Request
+
+### Development Guidelines
+
+- Follow **C++17** standards and best practices
+- Use **modern CMake** patterns (3.19+)
+- Maintain **cross-platform** compatibility
+- Add **comprehensive tests** for new features
+- Update **documentation** for API changes
+
+## 📄 License
+
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **CEF Team** for the Chromium Embedded Framework
+- **SDL Team** for cross-platform window management
+- **React/Vue Teams** for excellent frontend frameworks
+- **CMake Community** for build system excellence
+
+---
+
+**MikoView** - Building the future of desktop applications with web technologies 🚀
