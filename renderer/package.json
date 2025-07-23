@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "react",
-    "vue"
+    "vue",
+    "api"
   ],
   "scripts": {
     "dev:react": "bun --cwd react run dev",

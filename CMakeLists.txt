@@ -1,324 +1,106 @@
 cmake_minimum_required(VERSION 3.19)
 project(MikoView)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# Include our custom CMake modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-# Include FetchContent for downloading dependencies
-include(FetchContent)
+# Include configuration first
+include(MikoConfig)
 
-# Download and build SDL2
-FetchContent_Declare(
-    SDL2
-    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-    GIT_TAG release-2.28.5
-    GIT_SHALLOW TRUE
-)
+# Include platform detection
+include(MikoPlatform)
 
-# Configure SDL2 options
-set(SDL_SHARED ON CACHE BOOL "Build SDL2 as shared library")
-set(SDL_STATIC OFF CACHE BOOL "Build SDL2 as static library")
-set(SDL_TEST OFF CACHE BOOL "Build SDL2 test programs")
+# Include macros and functions
+include(MikoMacros)
 
-FetchContent_MakeAvailable(SDL2)
+# Include and setup dependencies
+include(MikoDependencies)
+setup_all_dependencies()
 
-# Set CEF version and platform
-set(CEF_VERSION "138.0.27+g0b28f18+chromium-138.0.7204.158")
-if(WIN32)
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set(CEF_PLATFORM "windows64")
-    else()
-        set(CEF_PLATFORM "windows32")
-    endif()
-elseif(APPLE)
-    set(CEF_PLATFORM "macosx64")
-else()
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set(CEF_PLATFORM "linux64")
-    else()
-        set(CEF_PLATFORM "linux32")
-    endif()
-endif()
+# Configure output directories
+configure_output_directories()
 
-# CEF download URL and paths
-set(CEF_DOWNLOAD_URL "https://cef-builds.spotifycdn.com/cef_binary_${CEF_VERSION}_${CEF_PLATFORM}.tar.bz2")
-set(CEF_ROOT "${CMAKE_BINARY_DIR}/cef")
-set(CEF_ARCHIVE "${CMAKE_BINARY_DIR}/cef_binary.tar.bz2")
-set(CEF_EXTRACTED_DIR "${CMAKE_BINARY_DIR}/cef_binary_${CEF_VERSION}_${CEF_PLATFORM}")
+# Convert icon if needed (Windows)
+convert_icon_if_needed()
 
-# Function to download and extract CEF
-function(download_cef)
-    if(NOT EXISTS "${CEF_ROOT}")
-        message(STATUS "Downloading CEF from ${CEF_DOWNLOAD_URL}")
-        
-        # Download CEF
-        file(DOWNLOAD "${CEF_DOWNLOAD_URL}" "${CEF_ARCHIVE}"
-             SHOW_PROGRESS
-             STATUS download_status
-             LOG download_log)
-        
-        list(GET download_status 0 status_code)
-        if(NOT status_code EQUAL 0)
-            message(FATAL_ERROR "Failed to download CEF: ${download_log}")
+# Setup MikoView framework
+setup_mikoview_framework()
+
+# Example executable (if enabled)
+if(MIKO_BUILD_EXAMPLES)
+    if(WIN32)
+        # Windows application (no console unless requested)
+        if(MIKO_WIN32_CONSOLE)
+            add_executable(${PROJECT_NAME}
+                example/main.cpp
+                example/app_config.cpp
+            )
+        else()
+            add_executable(${PROJECT_NAME} WIN32
+                example/main.cpp
+                example/app_config.cpp
+            )
         endif()
-        
-        # Extract CEF
-        message(STATUS "Extracting CEF...")
-        execute_process(
-            COMMAND ${CMAKE_COMMAND} -E tar xjf "${CEF_ARCHIVE}"
-            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-            RESULT_VARIABLE extract_result
-        )
-        
-        if(NOT extract_result EQUAL 0)
-            message(FATAL_ERROR "Failed to extract CEF archive")
-        endif()
-        
-        # Move extracted directory to CEF_ROOT
-        file(RENAME "${CEF_EXTRACTED_DIR}" "${CEF_ROOT}")
-        
-        # Clean up archive
-        file(REMOVE "${CEF_ARCHIVE}")
-        
-        message(STATUS "CEF downloaded and extracted successfully")
     else()
-        message(STATUS "CEF already exists at ${CEF_ROOT}")
-    endif()
-endfunction()
-
-# Download CEF
-download_cef()
-
-# Set CEF_ROOT for find_package
-set(CEF_ROOT "${CEF_ROOT}")
-
-# Add CEF cmake modules to path
-list(APPEND CMAKE_MODULE_PATH "${CEF_ROOT}/cmake")
-
-# Find CEF
-find_package(CEF REQUIRED)
-
-# Determine the target output directory based on platform and generator
-if(CMAKE_CONFIGURATION_TYPES)
-    # Multi-config generators (Visual Studio, Xcode)
-    set(CEF_TARGET_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>")
-else()
-    # Single-config generators (Ninja, Make)
-    set(CEF_TARGET_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CEF_TARGET_OUT_DIR})
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CEF_TARGET_OUT_DIR})
-endif()
-
-# Platform-specific CEF library setup
-if(OS_WINDOWS)
-    # Create libcef_lib target
-    add_library(libcef_lib SHARED IMPORTED)
-    set_target_properties(libcef_lib PROPERTIES
-        IMPORTED_LOCATION "${CEF_ROOT}/Release/libcef.dll"
-        IMPORTED_LOCATION_DEBUG "${CEF_ROOT}/Debug/libcef.dll"
-        IMPORTED_LOCATION_RELEASE "${CEF_ROOT}/Release/libcef.dll"
-        IMPORTED_IMPLIB "${CEF_ROOT}/Release/libcef.lib"
-        IMPORTED_IMPLIB_DEBUG "${CEF_ROOT}/Debug/libcef.lib"
-        IMPORTED_IMPLIB_RELEASE "${CEF_ROOT}/Release/libcef.lib"
-    )
-    
-    # Create libcef_dll_wrapper target
-    add_subdirectory("${CEF_ROOT}/libcef_dll" libcef_dll_wrapper)
-elseif(OS_LINUX)
-    # Create libcef_lib target for Linux
-    add_library(libcef_lib SHARED IMPORTED)
-    set_target_properties(libcef_lib PROPERTIES
-        IMPORTED_LOCATION "${CEF_ROOT}/Release/libcef.so"
-        IMPORTED_LOCATION_DEBUG "${CEF_ROOT}/Debug/libcef.so"
-        IMPORTED_LOCATION_RELEASE "${CEF_ROOT}/Release/libcef.so"
-    )
-    
-    # Create libcef_dll_wrapper target
-    add_subdirectory("${CEF_ROOT}/libcef_dll" libcef_dll_wrapper)
-endif()
-
-# Convert PNG icon to ICO if needed (Windows only)
-if(WIN32)
-    set(ICON_PNG "${CMAKE_SOURCE_DIR}/example/assets/icon.png")
-    set(ICON_ICO "${CMAKE_SOURCE_DIR}/example/assets/icon.ico")
-    
-    # Check if icon.png exists and icon.ico doesn't exist or is older
-    if(EXISTS "${ICON_PNG}")
-        if(NOT EXISTS "${ICON_ICO}" OR "${ICON_PNG}" IS_NEWER_THAN "${ICON_ICO}")
-            find_package(Python3 COMPONENTS Interpreter)
-            if(Python3_FOUND)
-                message(STATUS "Converting icon.png to icon.ico")
-                execute_process(
-                    COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tools/iconconvert.py" "${ICON_PNG}" "${ICON_ICO}"
-                    RESULT_VARIABLE icon_convert_result
-                    OUTPUT_VARIABLE icon_convert_output
-                    ERROR_VARIABLE icon_convert_error
-                )
-                
-                if(NOT icon_convert_result EQUAL 0)
-                    message(WARNING "Failed to convert icon: ${icon_convert_error}")
-                else()
-                    message(STATUS "Icon converted successfully")
-                endif()
-            else()
-                message(WARNING "Python3 not found, cannot convert icon automatically")
-            endif()
-        endif()
-    endif()
-endif()
-
-# Platform-specific source files
-set(PLATFORM_SOURCES)
-if(WIN32)
-    list(APPEND PLATFORM_SOURCES mikoview/gui/windows/win32_dark.cpp)
-elseif(UNIX AND NOT APPLE)
-    list(APPEND PLATFORM_SOURCES mikoview/gui/linux/x11_dark.cpp)
-endif()
-
-# MikoView Framework Library
-add_library(mikoview_framework STATIC
-    mikoview.cpp
-    mikoview/simple_app.cpp
-    mikoview/simple_client.cpp
-    mikoview/logger.cpp
-    mikoview/jsapi/invoke.cpp
-    ${PLATFORM_SOURCES}
-)
-
-# Set target properties for the framework
-SET_LIBRARY_TARGET_PROPERTIES(mikoview_framework)
-
-# Framework include directories
-target_include_directories(mikoview_framework PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CEF_ROOT}
-)
-
-# Platform-specific include directories for framework
-if(UNIX AND NOT APPLE)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(X11 REQUIRED x11)
-    target_include_directories(mikoview_framework PRIVATE ${X11_INCLUDE_DIRS})
-endif()
-
-# Link framework libraries
-target_link_libraries(mikoview_framework PUBLIC
-    SDL2::SDL2
-    libcef_lib
-    libcef_dll_wrapper
-    ${CEF_STANDARD_LIBS}
-)
-
-# Platform-specific libraries for framework
-if(UNIX AND NOT APPLE)
-    target_link_libraries(mikoview_framework PUBLIC ${X11_LIBRARIES})
-endif()
-
-# Example executable
-if(WIN32)
-    # Windows application (no console)
-    add_executable(${PROJECT_NAME} WIN32
-        example/main.cpp
-        example/app_config.cpp
-    )
-else()
-    # Linux/Unix application
-    add_executable(${PROJECT_NAME}
-        example/main.cpp
-        example/app_config.cpp
-    )
-endif()
-
-# Add Windows resource file
-if(WIN32)
-    target_sources(${PROJECT_NAME} PRIVATE example/assets/app.rc)
-endif()
-
-# Set target properties using CEF macros
-SET_EXECUTABLE_TARGET_PROPERTIES(${PROJECT_NAME})
-
-# Link the example with the framework
-target_link_libraries(${PROJECT_NAME}
-    mikoview_framework
-    SDL2::SDL2main
-)
-
-# Include directories for example
-target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/example
-    ${CEF_ROOT}
-)
-
-# Copy CEF binaries and resources to output directory
-if(OS_WINDOWS)
-    # Copy CEF binary files
-    COPY_FILES("${PROJECT_NAME}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
-    
-    # Copy CEF resource files
-    COPY_FILES("${PROJECT_NAME}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CEF_TARGET_OUT_DIR}")
-    
-    # Copy SDL2 DLL to output directory
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:SDL2::SDL2>
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>
-        COMMENT "Copying SDL2 DLL to output directory"
-    )
-    
-    # Copy app.zip for release builds
-    if(CMAKE_BUILD_TYPE STREQUAL "Release" OR "$<CONFIG>" STREQUAL "Release")
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E make_directory
-            "${CEF_TARGET_OUT_DIR}/assets"
-            COMMENT "Creating assets directory"
-        )
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_SOURCE_DIR}/example/assets/app.zip"
-            "${CEF_TARGET_OUT_DIR}/assets/app.zip"
-            COMMENT "Copying app.zip to release directory"
+        # Linux/Unix application
+        add_executable(${PROJECT_NAME}
+            example/main.cpp
+            example/app_config.cpp
         )
     endif()
-elseif(OS_LINUX)
-    # Copy CEF binary files for Linux
-    COPY_FILES("${PROJECT_NAME}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
     
-    # Copy CEF resource files for Linux
-    COPY_FILES("${PROJECT_NAME}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CEF_TARGET_OUT_DIR}")
-    
-    # Copy app.zip for release builds
-    if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E make_directory
-            "${CEF_TARGET_OUT_DIR}/assets"
-            COMMENT "Creating assets directory"
-        )
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_SOURCE_DIR}/example/assets/app.zip"
-            "${CEF_TARGET_OUT_DIR}/assets/app.zip"
-            COMMENT "Copying app.zip to release directory"
-        )
+    # Add Windows resource file
+    if(WIN32 AND MIKO_WIN32_MANIFEST)
+        target_sources(${PROJECT_NAME} PRIVATE example/assets/app.rc)
     endif()
+    
+    # Set target properties
+    SET_EXECUTABLE_TARGET_PROPERTIES(${PROJECT_NAME})
+    
+    # Set platform-specific compiler flags
+    set_platform_compiler_flags(${PROJECT_NAME})
+    
+    # Link the example with the framework
+    target_link_libraries(${PROJECT_NAME}
+        mikoview_framework
+        SDL2::SDL2main
+    )
+    
+    # Include directories for example
+    target_include_directories(${PROJECT_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/example
+        ${CEF_ROOT}
+    )
+    
+    # Setup CEF files and app assets
+    setup_cef_files(${PROJECT_NAME})
+    setup_app_assets(${PROJECT_NAME})
 endif()
 
-# Set startup project for Visual Studio
-if(WIN32)
-    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
-endif()
-
-# Print CEF configuration
+# Print configuration information
+print_configuration_summary()
+print_project_config()
 PRINT_CEF_CONFIG()
 
-# Install targets (optional)
-install(TARGETS ${PROJECT_NAME} mikoview_framework
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-)
+# Install targets
+if(MIKO_BUILD_EXAMPLES)
+    install(TARGETS ${PROJECT_NAME} mikoview_framework
+        RUNTIME DESTINATION ${MIKO_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${MIKO_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${MIKO_INSTALL_LIBDIR}
+    )
+else()
+    install(TARGETS mikoview_framework
+        LIBRARY DESTINATION ${MIKO_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${MIKO_INSTALL_LIBDIR}
+    )
+endif()
 
 # Install headers for the framework
-install(FILES mikoview.hpp DESTINATION include)
-install(DIRECTORY mikoview/ DESTINATION include/mikoview
+install(FILES mikoview.hpp DESTINATION ${MIKO_INSTALL_INCLUDEDIR})
+install(DIRECTORY mikoview/ DESTINATION ${MIKO_INSTALL_INCLUDEDIR}/mikoview
     FILES_MATCHING PATTERN "*.hpp")
+
+# Include CPack for packaging
+include(CPack)
