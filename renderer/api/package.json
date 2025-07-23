@@ -60,13 +60,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mikoview/mikoview.git",
+    "url": "https://github.com/arizkami/mikoview.git",
     "directory": "renderer/api"
   },
   "bugs": {
-    "url": "https://github.com/mikoview/mikoview/issues"
+    "url": "https://github.com/arizkami/mikoview/issues"
   },
-  "homepage": "https://github.com/mikoview/mikoview#readme",
+  "homepage": "https://github.com/arizkami/mikoview#readme",
   "engines": {
     "node": ">=16.0.0"
   }
