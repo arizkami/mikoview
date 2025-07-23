@@ -139,8 +139,8 @@ endif()
 
 # Convert PNG icon to ICO if needed (Windows only)
 if(WIN32)
-    set(ICON_PNG "${CMAKE_SOURCE_DIR}/src/assets/icon.png")
-    set(ICON_ICO "${CMAKE_SOURCE_DIR}/src/assets/icon.ico")
+    set(ICON_PNG "${CMAKE_SOURCE_DIR}/example/assets/icon.png")
+    set(ICON_ICO "${CMAKE_SOURCE_DIR}/example/assets/icon.ico")
     
     # Check if icon.png exists and icon.ico doesn't exist or is older
     if(EXISTS "${ICON_PNG}")
@@ -170,70 +170,85 @@ endif()
 # Platform-specific source files
 set(PLATFORM_SOURCES)
 if(WIN32)
-    list(APPEND PLATFORM_SOURCES src/gui/win32_dark.cpp)
+    list(APPEND PLATFORM_SOURCES mikoview/gui/windows/win32_dark.cpp)
 elseif(UNIX AND NOT APPLE)
-    list(APPEND PLATFORM_SOURCES src/gui/linux/x11_dark.cpp)
+    list(APPEND PLATFORM_SOURCES mikoview/gui/linux/x11_dark.cpp)
 endif()
 
-# Add executable
+# MikoView Framework Library
+add_library(mikoview_framework STATIC
+    mikoview.cpp
+    mikoview/simple_app.cpp
+    mikoview/simple_client.cpp
+    mikoview/logger.cpp
+    mikoview/jsapi/invoke.cpp
+    ${PLATFORM_SOURCES}
+)
+
+# Set target properties for the framework
+SET_LIBRARY_TARGET_PROPERTIES(mikoview_framework)
+
+# Framework include directories
+target_include_directories(mikoview_framework PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CEF_ROOT}
+)
+
+# Platform-specific include directories for framework
+if(UNIX AND NOT APPLE)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(X11 REQUIRED x11)
+    target_include_directories(mikoview_framework PRIVATE ${X11_INCLUDE_DIRS})
+endif()
+
+# Link framework libraries
+target_link_libraries(mikoview_framework PUBLIC
+    SDL2::SDL2
+    libcef_lib
+    libcef_dll_wrapper
+    ${CEF_STANDARD_LIBS}
+)
+
+# Platform-specific libraries for framework
+if(UNIX AND NOT APPLE)
+    target_link_libraries(mikoview_framework PUBLIC ${X11_LIBRARIES})
+endif()
+
+# Example executable
 if(WIN32)
     # Windows application (no console)
     add_executable(${PROJECT_NAME} WIN32
-        src/main.cpp
-        src/logger.cpp
-        src/app_config.cpp
-        src/simple_client.cpp
-        src/simple_app.cpp
-        ${PLATFORM_SOURCES}
+        example/main.cpp
+        example/app_config.cpp
     )
 else()
     # Linux/Unix application
     add_executable(${PROJECT_NAME}
-        src/main.cpp
-        src/logger.cpp
-        src/app_config.cpp
-        src/simple_client.cpp
-        src/simple_app.cpp
-        ${PLATFORM_SOURCES}
+        example/main.cpp
+        example/app_config.cpp
     )
 endif()
 
 # Add Windows resource file
 if(WIN32)
-    target_sources(${PROJECT_NAME} PRIVATE src/assets/app.rc)
+    target_sources(${PROJECT_NAME} PRIVATE example/assets/app.rc)
 endif()
 
 # Set target properties using CEF macros
 SET_EXECUTABLE_TARGET_PROPERTIES(${PROJECT_NAME})
 
-# Platform-specific libraries
-set(PLATFORM_LIBS)
-if(UNIX AND NOT APPLE)
-    # Linux-specific libraries
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(X11 REQUIRED x11)
-    list(APPEND PLATFORM_LIBS ${X11_LIBRARIES})
-endif()
-
-# Link SDL2 and CEF libraries
+# Link the example with the framework
 target_link_libraries(${PROJECT_NAME}
-    SDL2::SDL2
+    mikoview_framework
     SDL2::SDL2main
-    libcef_lib
-    libcef_dll_wrapper
-    ${CEF_STANDARD_LIBS}
-    ${PLATFORM_LIBS}
 )
 
-# Include directories
+# Include directories for example
 target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/example
     ${CEF_ROOT}
 )
-
-# Platform-specific include directories
-if(UNIX AND NOT APPLE)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${X11_INCLUDE_DIRS})
-endif()
 
 # Copy CEF binaries and resources to output directory
 if(OS_WINDOWS)
@@ -260,7 +275,7 @@ if(OS_WINDOWS)
         )
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_SOURCE_DIR}/src/assets/app.zip"
+            "${CMAKE_SOURCE_DIR}/example/assets/app.zip"
             "${CEF_TARGET_OUT_DIR}/assets/app.zip"
             COMMENT "Copying app.zip to release directory"
         )
@@ -281,7 +296,7 @@ elseif(OS_LINUX)
         )
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_SOURCE_DIR}/src/assets/app.zip"
+            "${CMAKE_SOURCE_DIR}/example/assets/app.zip"
             "${CEF_TARGET_OUT_DIR}/assets/app.zip"
             COMMENT "Copying app.zip to release directory"
         )
@@ -295,3 +310,15 @@ endif()
 
 # Print CEF configuration
 PRINT_CEF_CONFIG()
+
+# Install targets (optional)
+install(TARGETS ${PROJECT_NAME} mikoview_framework
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+# Install headers for the framework
+install(FILES mikoview.hpp DESTINATION include)
+install(DIRECTORY mikoview/ DESTINATION include/mikoview
+    FILES_MATCHING PATTERN "*.hpp")
