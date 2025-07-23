@@ -1,0 +1,73 @@
+{
+  "name": "@mikoview/api",
+  "version": "1.0.0",
+  "description": "TypeScript API definitions for MikoView desktop application framework",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rimraf dist",
+    "dev": "tsc --watch",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "mikoview",
+    "desktop",
+    "electron-alternative",
+    "cef",
+    "sdl",
+    "typescript",
+    "api"
+  ],
+  "author": "MikoView Team",
+  "license": "MIT",
+  "files": [
+    "dist/**/*",
+    "src/**/*",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js",
+      "require": "./dist/core/index.js"
+    },
+    "./control": {
+      "types": "./dist/control/index.d.ts",
+      "import": "./dist/control/index.js",
+      "require": "./dist/control/index.js"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "rimraf": "^5.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "typescript": ">=4.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mikoview/mikoview.git",
+    "directory": "renderer/api"
+  },
+  "bugs": {
+    "url": "https://github.com/mikoview/mikoview/issues"
+  },
+  "homepage": "https://github.com/mikoview/mikoview#readme",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "mikoview-frontend",
+  "private": true,
+  "workspaces": [
+    "react",
+    "vue"
+  ],
+  "scripts": {
+    "dev:react": "bun --cwd react run dev",
+    "dev:vue": "bun --cwd vue run dev",
+    "build:react": "bun --cwd react run build",
+    "build:vue": "bun --cwd vue run build",
+    "dev": "bun run serve"
+  },
+  "devDependencies": {
+    "bun": "latest"
+  }
+}
