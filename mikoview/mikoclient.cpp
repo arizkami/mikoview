@@ -1,8 +1,8 @@
 #include "mikoclient.hpp"
 #include "app_config.hpp"
 #include "logger.hpp"
-#include "include/wrapper/cef_helpers.h"
-#include "include/cef_app.h"
+#include "wrapper/cef_helpers.h"
+#include "cef_app.h"
 #include <SDL.h>
 #include <functional>
 

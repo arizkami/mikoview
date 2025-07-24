@@ -111,7 +111,8 @@ function(download_cef CEF_VERSION CEF_PLATFORM)
     # Set variables in parent scope
     set(CEF_ROOT "${CEF_ROOT}" PARENT_SCOPE)
 endfunction()
-
+include_directories(${CEF_ROOT}/include)
+# Function to configure CEF libraries
 # Function to configure CEF libraries
 function(configure_cef_libraries)
     # Add CEF cmake modules to path
@@ -121,7 +122,7 @@ function(configure_cef_libraries)
     find_package(CEF REQUIRED)
     
     # Platform-specific CEF library setup
-    if(OS_WINDOWS)
+    if(MIKO_PLATFORM_WINDOWS)
         # Create libcef_lib target
         add_library(libcef_lib SHARED IMPORTED)
         set_target_properties(libcef_lib PROPERTIES
@@ -135,7 +136,7 @@ function(configure_cef_libraries)
         
         # Create libcef_dll_wrapper target
         add_subdirectory("${CEF_ROOT}/libcef_dll" libcef_dll_wrapper)
-    elseif(OS_LINUX)
+    elseif(MIKO_PLATFORM_LINUX)
         # Create libcef_lib target for Linux
         add_library(libcef_lib SHARED IMPORTED)
         set_target_properties(libcef_lib PROPERTIES

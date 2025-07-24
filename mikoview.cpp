@@ -20,9 +20,9 @@
 // SDL and CEF includes
 #include <SDL.h>
 #include <SDL_syswm.h>
-#include "include/cef_app.h"
-#include "include/cef_browser.h"
-#include "include/wrapper/cef_helpers.h"
+#include "cef_app.h"
+#include "cef_browser.h"
+#include "wrapper/cef_helpers.h"
 
 // Standard includes
 #include <filesystem>

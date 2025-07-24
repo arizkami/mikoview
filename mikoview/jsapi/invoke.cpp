@@ -1,7 +1,7 @@
 #include "invoke.hpp"
 #include "../logger.hpp"
-#include "include/cef_task.h"
-#include "include/wrapper/cef_helpers.h"
+#include "cef_task.h"
+#include "wrapper/cef_helpers.h"
 #include <json/json.h>
 #include <sstream>
 

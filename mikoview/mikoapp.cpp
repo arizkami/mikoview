@@ -1,6 +1,6 @@
 #include "mikoapp.hpp"
-#include "include/cef_scheme.h"
-#include "include/wrapper/cef_helpers.h"
+#include "cef_scheme.h"
+#include "wrapper/cef_helpers.h"
 #include <fstream>
 #include <filesystem>
 #include <cstdint>

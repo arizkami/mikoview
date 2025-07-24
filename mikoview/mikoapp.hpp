@@ -1,6 +1,6 @@
 #pragma once
-#include "include/cef_app.h"
-#include "include/cef_scheme.h"
+#include "cef_app.h"
+#include "cef_scheme.h"
 
 class SimpleApp : public CefApp, public CefBrowserProcessHandler {
 public:
