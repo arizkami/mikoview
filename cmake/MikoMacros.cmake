@@ -283,7 +283,7 @@ function(setup_mikoview_framework)
     target_include_directories(mikoview_framework PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_BINARY_DIR}/generated
-        ${CEF_ROOT}
+        ${CEF_ROOT}/include
     )
     
     # Platform-specific include directories
