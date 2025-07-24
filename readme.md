@@ -1,14 +1,14 @@
 # MikoView
 
-![Development Status](https://img.shields.io/badge/status-in%20development-yellow)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
-![Build Status](https://img.shields.io/badge/build-failed-red)
-![Language](https://img.shields.io/badge/language-C%2B%2B17-blue)
-![Framework](https://img.shields.io/badge/framework-CEF%20%7C%20SDL2-green)
-![Frontend](https://img.shields.io/badge/frontend-React%20%7C%20Vue%20%7C%20TypeScript-61DAFB)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Build System](https://img.shields.io/badge/build-CMake-red)
-![Version](https://img.shields.io/badge/version-0.1.0--dev-orange)
+![Development Status](https://img.shields.io/badge/status-in%20development-yellow?style=for-the-badge&logo=clockify)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue?style=for-the-badge&logo=windows&logo=linux&logo=apple)
+![Build Status](https://img.shields.io/badge/build-failed-red?style=for-the-badge&logo=github-actions)
+![Language](https://img.shields.io/badge/language-C%2B%2B17-blue?style=for-the-badge&logo=cplusplus)
+![Framework](https://img.shields.io/badge/framework-CEF%20%7C%20SDL2-green?style=for-the-badge&logo=chromium)
+![Frontend](https://img.shields.io/badge/frontend-React%20%7C%20Vue%20%7C%20TypeScript-61DAFB?style=for-the-badge&logo=react&logo=vue.js&logo=typescript)
+![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge&logo=license)
+![Build System](https://img.shields.io/badge/build-CMake-red?style=for-the-badge&logo=cmake)
+![Version](https://img.shields.io/badge/version-0.1.0--dev-orange?style=for-the-badge&logo=semver)
 
 ![banner_x2](https://github.com/user-attachments/assets/b456c9c5-d1e1-454e-adc3-c0b9915aa279)
 
