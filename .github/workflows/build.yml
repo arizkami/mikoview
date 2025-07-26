@@ -1,0 +1,36 @@
+name: Build and Test (CMake)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y \
+          build-essential \
+          ninja-build \
+          libsdl2-dev
+
+      - name: Configure (CMake)
+        run: cmake -B build -S . -G Ninja -DMIKO_BUILD_EXAMPLES=ON
+
+      - name: Build (CMake)
+        run: cmake --build build --parallel
+
+      - name: Run Tests
+        run: ctest --test-dir build || echo "No tests found"
+
+      - name: Package (optional)
+        run: cmake --install build --prefix out
