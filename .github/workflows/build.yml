@@ -1,4 +1,4 @@
-name: Build and Test (CMake)
+name: Build and Test (CMake, Linux)
 
 on:
   push:
@@ -11,26 +11,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout source
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Setup CMake (ล่าสุด)
       - name: Setup CMake
         uses: lukka/get-cmake@latest
 
+      # 3. Install dependencies (Linux only)
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y \
-          build-essential \
-          ninja-build \
-          libsdl2-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            ninja-build \
+            libsdl2-dev
 
-      - name: Configure (CMake)
+      # 4. Configure (CMake)
+      - name: Configure project
         run: cmake -B build -S . -G Ninja -DMIKO_BUILD_EXAMPLES=ON
 
-      - name: Build (CMake)
+      # 5. Build project
+      - name: Build
         run: cmake --build build --parallel
 
+      # 6. Run tests (ถ้ามี)
       - name: Run Tests
         run: ctest --test-dir build || echo "No tests found"
 
-      - name: Package (optional)
-        run: cmake --install build --prefix out
+      # 7. Package ด้วย CPack
+      - name: Package (CPack)
+        run: cmake --build build --target package
+
+      # 8. เก็บผลลัพธ์เป็น artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mikoview-linux-build
+          path: build/*.tar.gz
